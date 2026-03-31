@@ -13,8 +13,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source
+# Install the package so `python -m vocalisai_mcp` is resolvable
+COPY pyproject.toml .
 COPY src/ ./src/
+RUN pip install --no-cache-dir --no-deps -e .
 
 # Switch to non-root
 USER vocalis
