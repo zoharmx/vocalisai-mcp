@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # VocalisAI MCP Server — Production Container
-# Transport: Streamable HTTP (port 8001)
+# Transport: Streamable HTTP — Cloud Run compatible
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.11-slim AS base
 
@@ -20,15 +20,14 @@ COPY src/ ./src/
 USER vocalis
 
 # ── Runtime defaults ──────────────────────────────────────────────────────────
+# PORT is set by Cloud Run at runtime — do NOT hardcode it here
 ENV MCP_TRANSPORT=http \
     MCP_PORT=8001 \
     LOG_LEVEL=INFO \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+# Cloud Run ignores EXPOSE but useful for local docker run
 EXPOSE 8001
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx, asyncio; asyncio.run(httpx.AsyncClient().get('http://localhost:8001/health'))" || exit 1
 
 CMD ["python", "-m", "vocalisai_mcp.server"]

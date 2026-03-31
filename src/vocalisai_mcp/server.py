@@ -533,16 +533,28 @@ async def get_platform_info_resource() -> str:
 
 
 def main() -> None:
-    """Start the MCP server. Transport is controlled by MCP_TRANSPORT env var."""
+    """Start the MCP server. Transport is controlled by MCP_TRANSPORT env var.
+
+    Cloud Run compatibility:
+      - Reads PORT env var first (Cloud Run always sets this).
+      - Falls back to MCP_PORT setting.
+      - Binds to 0.0.0.0 so Cloud Run health probes reach the container.
+    """
+    import os
+
     transport = settings.mcp_transport.lower()
 
+    # Cloud Run sets PORT; respect it over MCP_PORT
+    port = int(os.environ.get("PORT", settings.mcp_port))
+
     logger.info(
-        "Starting VocalisAI MCP Server v%s | transport=%s port=%d",
-        __version__, transport, settings.mcp_port,
+        "Starting VocalisAI MCP Server v%s | transport=%s host=0.0.0.0 port=%d",
+        __version__, transport, port,
     )
 
     if transport == "http":
-        mcp.run(transport="streamable_http", port=settings.mcp_port)
+        # FastMCP 3.x: transport="http", explicit host binding for Cloud Run
+        mcp.run(transport="http", host="0.0.0.0", port=port)
     else:
         mcp.run()  # Default: stdio
 
