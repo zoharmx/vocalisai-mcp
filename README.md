@@ -7,7 +7,8 @@
 
 A production-grade **Model Context Protocol (MCP)** server that exposes the VocalisAI multi-agent voice AI platform to any MCP-compatible LLM client — Claude Desktop, Cursor, Cline, or custom AI applications.
 
-> **Live platform:** `https://vocalis-ai-v3-<id>.us-central1.run.app`  
+> **MCP Server (production):** `https://vocalisai-mcp-495684990330.us-central1.run.app`  
+> **Live voice platform:** `https://vocalis-ai-v3-495684990330.us-central1.run.app`  
 > Built for the **Google Gemini Live Agent Challenge 2026**
 
 ---
@@ -83,7 +84,19 @@ docker compose up
 
 ## Claude Desktop Integration
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)  
+**Option A — Remote (no install needed):** point directly to the production Cloud Run server:
+
+```json
+{
+  "mcpServers": {
+    "vocalisai": {
+      "url": "https://vocalisai-mcp-495684990330.us-central1.run.app/mcp"
+    }
+  }
+}
+```
+
+**Option B — Local:** add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)  
 or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
@@ -94,7 +107,7 @@ or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
       "args": ["-m", "vocalisai_mcp"],
       "cwd": "/path/to/vocalisai-mcp",
       "env": {
-        "VOCALISAI_BASE_URL": "https://your-cloud-run-url.run.app"
+        "VOCALISAI_BASE_URL": "https://vocalis-ai-v3-495684990330.us-central1.run.app"
       }
     }
   }
