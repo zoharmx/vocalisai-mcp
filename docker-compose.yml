@@ -1,0 +1,28 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VocalisAI MCP Server — Local Development Stack
+# Usage: docker compose up
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  vocalisai-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vocalisai-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-8001}:8001"
+    env_file:
+      - .env
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_PORT=8001
+    volumes:
+      - ./src:/app/src:ro   # live reload in dev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,asyncio; asyncio.run(httpx.AsyncClient().get('http://localhost:8001/health'))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
