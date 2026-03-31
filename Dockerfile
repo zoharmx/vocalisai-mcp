@@ -13,10 +13,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install the package so `python -m vocalisai_mcp` is resolvable
-COPY pyproject.toml .
+# Copy source — PYTHONPATH makes vocalisai_mcp importable without package install
 COPY src/ ./src/
-RUN pip install --no-cache-dir --no-deps -e .
 
 # Switch to non-root
 USER vocalis
@@ -27,7 +25,8 @@ ENV MCP_TRANSPORT=http \
     MCP_PORT=8001 \
     LOG_LEVEL=INFO \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/src
 
 # Cloud Run ignores EXPOSE but useful for local docker run
 EXPOSE 8001
