@@ -7,9 +7,10 @@
 
 A production-grade **Model Context Protocol (MCP)** server that exposes the VocalisAI multi-agent voice AI platform to any MCP-compatible LLM client — Claude Desktop, Cursor, Cline, or custom AI applications.
 
-> **MCP Server (production):** `https://vocalisai-mcp-495684990330.us-central1.run.app`  
-> **Live voice platform:** `https://vocalis-ai-v3-495684990330.us-central1.run.app`  
-> Built for the **Google Gemini Live Agent Challenge 2026**
+> **Dashboard (production):** `https://vocalisai-dashboard-hzz2wlra6a-uc.a.run.app`  
+> **MCP Server (production):** `https://vocalisai-mcp-hzz2wlra6a-uc.a.run.app`  
+> **Live voice platform:** `https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app`  
+> Built for the **Google Gemini Live Agent Challenge 2026** · Powered by **Vertex AI**
 
 ---
 
