@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VocalisAI — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #070c18;
+  --surface:  #0d1424;
+  --card:     #111b2e;
+  --border:   #1e2d4a;
+  --primary:  #6366f1;
+  --prim-dim: #1e1b4b;
+  --success:  #10b981;
+  --warning:  #f59e0b;
+  --danger:   #ef4444;
+  --info:     #06b6d4;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --accent:   #8b5cf6;
+  --radius:   10px;
+  --sidebar:  230px;
+  --header-h: 58px;
+}
+html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+.layout { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar); flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 20px 16px 16px; border-bottom: 1px solid var(--border);
+}
+.logo-mark { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.logo-icon {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--primary);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.logo-text { font-size: 15px; font-weight: 700; color: var(--text); }
+.logo-sub { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+.sidebar-nav { flex: 1; padding: 12px 8px; }
+.nav-section { margin-bottom: 20px; }
+.nav-section-label { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; padding: 0 8px; margin-bottom: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 7px;
+  cursor: pointer; transition: background .15s, color .15s; color: var(--muted); font-weight: 500;
+  font-size: 13px; margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active { background: var(--prim-dim); color: var(--primary); }
+.nav-icon { width: 18px; text-align: center; flex-shrink: 0; }
+.sidebar-footer {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+}
+.status-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.dot-yellow { background: var(--warning); }
+.dot-red { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.dot-gray { background: var(--muted); }
+
+/* ── Main ──────────────────────────────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.top-header {
+  height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0;
+}
+.header-title { font-size: 16px; font-weight: 600; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.header-badge {
+  background: var(--prim-dim); color: var(--primary); border: 1px solid var(--primary);
+  border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600;
+}
+.header-time { color: var(--muted); font-size: 12px; font-family: monospace; }
+.refresh-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  transition: border-color .15s, color .15s;
+}
+.refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* ── Sections ──────────────────────────────────────────────────────────────── */
+.section { display: none; }
+.section.active { display: block; }
+.section-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px;
+}
+.card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+
+/* ── KPI Grid ──────────────────────────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.kpi-calls::before  { background: var(--primary); }
+.kpi-agents::before { background: var(--success); }
+.kpi-ethics::before { background: var(--accent); }
+.kpi-emerg::before  { background: var(--danger); }
+.kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+.kpi-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.trend-up   { color: var(--success); }
+.trend-down { color: var(--danger); }
+.trend-neutral { color: var(--muted); }
+
+/* ── Chart Grid ────────────────────────────────────────────────────────────── */
+.chart-row { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 20px; }
+.chart-row-2 { grid-template-columns: 2fr 1fr; }
+.chart-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.chart-row-equal { grid-template-columns: 1fr 1fr; }
+.chart-canvas-wrap { position: relative; height: 220px; }
+.chart-canvas-wrap-sm { position: relative; height: 180px; }
+.chart-canvas-wrap-lg { position: relative; height: 300px; }
+
+/* ── Agent Cards ───────────────────────────────────────────────────────────── */
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.agent-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px; transition: border-color .2s, transform .15s;
+}
+.agent-card:hover { transform: translateY(-2px); border-color: var(--muted); }
+.agent-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.agent-avatar {
+  width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.agent-meta { flex: 1; min-width: 0; }
+.agent-name { font-weight: 700; font-size: 15px; }
+.agent-role { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agent-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+.agent-stat { flex: 1; background: var(--surface); border-radius: 6px; padding: 8px; text-align: center; }
+.agent-stat-val { font-size: 16px; font-weight: 700; }
+.agent-stat-lbl { font-size: 10px; color: var(--muted); }
+.capabilities { display: flex; flex-wrap: wrap; gap: 5px; }
+.cap-chip {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 7px; font-size: 10px; color: var(--muted); white-space: nowrap;
+}
+.lang-badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
+  background: var(--surface); border: 1px solid;
+}
+
+/* ── Calls Table ───────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--surface); padding: 10px 14px; text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .05em; border-bottom: 1px solid var(--border);
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.025); }
+tbody td { padding: 10px 14px; font-size: 13px; }
+.agent-pill {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 5px;
+  padding: 3px 8px; font-size: 11px; font-weight: 600; color: #fff;
+}
+.clearance-badge {
+  border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+}
+.approved   { background: rgba(16,185,129,.15); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
+.conditional { background: rgba(245,158,11,.15); color: var(--warning); border: 1px solid rgba(245,158,11,.3); }
+.rejected   { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+.priority-high { color: var(--danger); font-weight: 700; font-size: 11px; }
+.priority-normal { color: var(--muted); font-size: 11px; }
+.score-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.score-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+.score-bar-fill { height: 4px; border-radius: 2px; background: var(--success); }
+.score-text { font-size: 12px; font-weight: 600; min-width: 32px; text-align: right; }
+.duration { color: var(--muted); font-family: monospace; font-size: 12px; }
+
+/* ── Ethics Section ────────────────────────────────────────────────────────── */
+.veto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+.veto-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.veto-count { font-size: 22px; font-weight: 700; }
+.veto-name { font-size: 11px; color: var(--muted); }
+.veto-sev { font-size: 10px; padding: 1px 6px; border-radius: 4px; align-self: flex-start; font-weight: 600; }
+.sev-critical { background: rgba(239,68,68,.15); color: var(--danger); }
+.sev-high     { background: rgba(245,158,11,.15); color: var(--warning); }
+.sev-medium   { background: rgba(6,182,212,.15);  color: var(--info); }
+
+/* ── Simulator ─────────────────────────────────────────────────────────────── */
+.sim-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.sim-form { display: flex; flex-direction: column; gap: 12px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: .05em; }
+textarea, select, input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); padding: 10px 12px; font-size: 13px; font-family: inherit;
+  resize: vertical; outline: none; transition: border-color .15s;
+}
+textarea:focus, select:focus, input:focus { border-color: var(--primary); }
+textarea { min-height: 90px; }
+select option { background: var(--card); }
+.sim-row { display: flex; gap: 10px; }
+.sim-row > * { flex: 1; }
+.btn {
+  padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: opacity .15s, transform .1s;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-primary:hover:not(:disabled) { opacity: .85; }
+.result-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; min-height: 120px;
+}
+.result-placeholder { color: var(--muted); font-size: 13px; text-align: center; padding: 30px; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.result-row:last-child { border-bottom: none; }
+.result-key { font-size: 12px; color: var(--muted); }
+.result-val { font-size: 13px; font-weight: 600; text-align: right; }
+.dim-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.dim-name { font-size: 12px; width: 70px; color: var(--muted); }
+.dim-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; }
+.dim-bar-fill { height: 6px; border-radius: 3px; transition: width .3s; }
+.dim-score { font-size: 12px; font-weight: 600; min-width: 36px; text-align: right; }
+.explanation-box {
+  background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.2);
+  border-radius: 7px; padding: 12px; font-size: 13px; color: var(--text); margin-top: 10px; line-height: 1.6;
+}
+
+/* ── Health Section ────────────────────────────────────────────────────────── */
+.health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.health-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.health-service { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.health-status-row { display: flex; align-items: center; gap: 8px; }
+.health-status-text { font-size: 15px; font-weight: 700; }
+.health-metric { font-size: 12px; color: var(--muted); }
+
+/* ── Loader / Spinner ──────────────────────────────────────────────────────── */
+.spinner {
+  width: 18px; height: 18px; border: 2px solid var(--border);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin .7s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-row { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); padding: 40px; font-size: 13px; }
+
+/* ── Misc helpers ──────────────────────────────────────────────────────────── */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-8 { gap: 8px; }
+.mb-14 { margin-bottom: 14px; }
+.mb-20 { margin-bottom: 20px; }
+.text-muted { color: var(--muted); }
+.text-sm { font-size: 12px; }
+.fw-600 { font-weight: 600; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.tag {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 7px; font-size: 11px; color: var(--muted);
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">🎙</div>
+      <div>
+        <div class="logo-text">VocalisAI</div>
+      </div>
+    </div>
+    <div class="logo-sub">DASHBOARD v1.0</div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-label">Principal</div>
+      <div class="nav-item active" onclick="showSection('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Resumen
+      </div>
+      <div class="nav-item" onclick="showSection('agents')" id="nav-agents">
+        <span class="nav-icon">🤖</span> Agentes
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Análisis</div>
+      <div class="nav-item" onclick="showSection('calls')" id="nav-calls">
+        <span class="nav-icon">📞</span> Llamadas
+      </div>
+      <div class="nav-item" onclick="showSection('ethics')" id="nav-ethics">
+        <span class="nav-icon">⚖️</span> Ética
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Herramientas</div>
+      <div class="nav-item" onclick="showSection('simulator')" id="nav-simulator">
+        <span class="nav-icon">🔬</span> Simulador
+      </div>
+      <div class="nav-item" onclick="showSection('health')" id="nav-health">
+        <span class="nav-icon">💡</span> Sistema
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="status-row">
+      <div class="dot dot-green" id="sidebar-dot"></div>
+      <span id="sidebar-status">Conectado</span>
+    </div>
+    <div class="status-row">
+      <span class="text-sm text-muted">VocalisAI V3 · us-central1</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+  <header class="top-header">
+    <div class="header-title" id="header-title">Resumen de la Plataforma</div>
+    <div class="header-right">
+      <span class="header-badge">Tikun Olam Framework</span>
+      <span class="header-time" id="clock">--:--:--</span>
+      <button class="refresh-btn" onclick="refreshAll()">↻ Actualizar</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ══════════════════ OVERVIEW ══════════════════ -->
+    <div class="section active" id="section-overview">
+      <div class="section-title">Resumen de la Plataforma</div>
+      <div class="section-sub">Métricas clave en tiempo real · VocalisAI V3 · Google Cloud Run</div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card kpi-calls">
+          <div class="kpi-label">Llamadas Hoy</div>
+          <div class="kpi-value" id="kpi-calls">—</div>
+          <div class="kpi-trend trend-up" id="kpi-calls-trend">+12.3% vs ayer</div>
+        </div>
+        <div class="kpi-card kpi-agents">
+          <div class="kpi-label">Agentes Activos</div>
+          <div class="kpi-value" id="kpi-agents">7 / 7</div>
+          <div class="kpi-trend trend-neutral">Todos operativos</div>
+        </div>
+        <div class="kpi-card kpi-ethics">
+          <div class="kpi-label">Score Ético Promedio</div>
+          <div class="kpi-value" id="kpi-ethics">—</div>
+          <div class="kpi-trend trend-up" id="kpi-ethics-trend">+2.1% esta semana</div>
+        </div>
+        <div class="kpi-card kpi-emerg">
+          <div class="kpi-label">Emergencias Hoy</div>
+          <div class="kpi-value" id="kpi-emerg">—</div>
+          <div class="kpi-trend trend-down" id="kpi-emerg-trend">▼ -5.2% vs ayer</div>
+        </div>
+      </div>
+
+      <!-- Call Volume 24h -->
+      <div class="card mb-14">
+        <div class="card-title">📈 Volumen de Llamadas — Últimas 24 Horas</div>
+        <div class="chart-canvas-wrap-lg">
+          <canvas id="chart-timeline"></canvas>
+        </div>
+      </div>
+
+      <!-- Row: Routing + Language + 7-day -->
+      <div class="chart-row chart-row-3">
+        <div class="card">
+          <div class="card-title">🎯 Distribución de Agentes</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chart-routing"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🌐 Idioma Detectado</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chart-language"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📅 Tendencia 7 Días</div>
+          <div class="chart-canvas-wrap">
+            <canvas id="chart-trend"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ AGENTS ══════════════════ -->
+    <div class="section" id="section-agents">
+      <div class="section-title">Agentes Especializados</div>
+      <div class="section-sub">7 agentes de IA con roles, idiomas y capacidades únicas</div>
+      <div class="agent-grid" id="agent-grid">
+        <div class="loading-row"><div class="spinner"></div> Cargando agentes…</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ CALLS ══════════════════ -->
+    <div class="section" id="section-calls">
+      <div class="section-title">Historial de Llamadas</div>
+      <div class="section-sub">Llamadas recientes con enrutamiento y evaluación ética</div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">📞 Llamadas Recientes</div>
+          <div class="text-muted text-sm">Mostrando últimas 15 · sesiones almacenadas 90 días</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Agente</th>
+                <th>Idioma</th>
+                <th>Prioridad</th>
+                <th>Mensaje</th>
+                <th>Score Ético</th>
+                <th>Estado</th>
+                <th>Duración</th>
+              </tr>
+            </thead>
+            <tbody id="calls-tbody">
+              <tr><td colspan="8" class="loading-row"><div class="spinner"></div> Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ ETHICS ══════════════════ -->
+    <div class="section" id="section-ethics">
+      <div class="section-title">Marco Ético — Tikun Olam</div>
+      <div class="section-sub">5 dimensiones · 5 proveedores LLM · evaluación automática por respuesta</div>
+
+      <div class="chart-row chart-row-equal mb-14">
+        <div class="card">
+          <div class="card-title">🕸 Scores Promedio por Dimensión</div>
+          <div class="chart-canvas-wrap-lg">
+            <canvas id="chart-radar"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">✅ Distribución de Aprobación</div>
+          <div class="chart-canvas-wrap" style="height:200px;">
+            <canvas id="chart-clearance"></canvas>
+          </div>
+          <div id="clearance-legend" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+      </div>
+
+      <div class="card mb-14">
+        <div class="card-title">🚨 Frecuencia de Hard Vetoes</div>
+        <div class="chart-canvas-wrap-sm">
+          <canvas id="chart-vetoes"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Detalle de Hard Vetoes Detectados</div>
+        <div class="veto-grid" id="veto-grid">
+          <div class="loading-row"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ SIMULATOR ══════════════════ -->
+    <div class="section" id="section-simulator">
+      <div class="section-title">Simulador en Vivo</div>
+      <div class="section-sub">Prueba el enrutamiento Akiva y la evaluación ética Tikun Olam en tiempo real</div>
+
+      <div class="sim-layout">
+        <!-- Form -->
+        <div class="card sim-form">
+          <div>
+            <label class="form-label">Mensaje del Paciente</label>
+            <textarea id="sim-user-msg" placeholder="Ej: Hola, me duele mucho el diente, como 8/10, necesito ayuda urgente…"></textarea>
+          </div>
+          <div class="sim-row">
+            <div>
+              <label class="form-label">Idioma (hint)</label>
+              <select id="sim-language">
+                <option value="">Auto-detectar</option>
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Agente para respuesta</label>
+              <select id="sim-agent">
+                <option value="alex">Alex</option>
+                <option value="nova">Nova</option>
+                <option value="diana">Diana</option>
+                <option value="sara">Sara</option>
+                <option value="marco">Marco</option>
+                <option value="raul">Raúl</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Respuesta propuesta del Agente <span class="text-muted">(para evaluación ética)</span></label>
+            <textarea id="sim-agent-resp" placeholder="Escribe aquí la respuesta que daría el agente seleccionado para evaluarla éticamente…"></textarea>
+          </div>
+          <div class="sim-row">
+            <button class="btn btn-secondary" onclick="simulateRoute()">🎯 Solo Enrutar</button>
+            <button class="btn btn-primary" onclick="simulateAll()">⚡ Analizar Todo</button>
+          </div>
+          <div id="sim-loading" style="display:none;" class="loading-row">
+            <div class="spinner"></div> Analizando…
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <!-- Routing result -->
+          <div class="card" id="route-result-card">
+            <div class="card-title">🎯 Resultado de Enrutamiento</div>
+            <div class="result-placeholder" id="route-placeholder">Escribe un mensaje y haz clic en Analizar</div>
+            <div id="route-result" style="display:none;"></div>
+          </div>
+          <!-- Ethics result -->
+          <div class="card" id="ethics-result-card">
+            <div class="card-title">⚖️ Evaluación Ética — Tikun Olam</div>
+            <div class="result-placeholder" id="ethics-placeholder">La evaluación ética aparecerá aquí</div>
+            <div id="ethics-result" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ HEALTH ══════════════════ -->
+    <div class="section" id="section-health">
+      <div class="section-title">Estado del Sistema</div>
+      <div class="section-sub">Monitoreo de servicios · VocalisAI Platform · Infraestructura</div>
+
+      <div class="health-grid" id="health-grid">
+        <div class="loading-row"><div class="spinner"></div> Verificando…</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔧 Configuración Activa</div>
+        <div id="config-info" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div><!-- /.content -->
+</div><!-- /.main -->
+</div><!-- /.layout -->
+
+<script>
+// ── State & Globals ──────────────────────────────────────────────────────────
+const charts = {};
+const SECTION_TITLES = {
+  overview:  'Resumen de la Plataforma',
+  agents:    'Agentes Especializados',
+  calls:     'Historial de Llamadas',
+  ethics:    'Marco Ético — Tikun Olam',
+  simulator: 'Simulador en Vivo',
+  health:    'Estado del Sistema',
+};
+
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#1e2d4a';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.font.size = 11;
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-MX', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+let currentSection = 'overview';
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  document.getElementById('header-title').textContent = SECTION_TITLES[name];
+  currentSection = name;
+  loadSection(name);
+}
+
+// ── Data Fetching ─────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, opts);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API ${path} → ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmt_duration(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+function clearance_class(c) {
+  return c === 'APPROVED' ? 'approved' : c === 'CONDITIONAL' ? 'conditional' : 'rejected';
+}
+function clearance_emoji(c) {
+  return c === 'APPROVED' ? '✅' : c === 'CONDITIONAL' ? '⚠️' : '❌';
+}
+function score_color(s) {
+  if (s >= 0.75) return '#10b981';
+  if (s >= 0.50) return '#f59e0b';
+  return '#ef4444';
+}
+function lang_badge(lang) {
+  const cfg = lang === 'es'
+    ? { label: 'ES', style: 'color:#3b82f6;border-color:#1d4ed8;' }
+    : lang === 'en'
+      ? { label: 'EN', style: 'color:#8b5cf6;border-color:#5b21b6;' }
+      : { label: '?', style: 'color:#64748b;border-color:#334155;' };
+  return `<span class="lang-badge" style="${cfg.style}">${cfg.label}</span>`;
+}
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  await Promise.all([
+    loadKPIs(),
+    loadTimeline(),
+    loadRoutingChart(),
+    loadLanguageChart(),
+    loadTrendChart(),
+  ]);
+}
+
+async function loadKPIs() {
+  const d = await api('/overview');
+  document.getElementById('kpi-calls').textContent = d.calls_today.toLocaleString();
+  document.getElementById('kpi-agents').textContent = `${d.active_agents} / ${d.total_agents}`;
+  document.getElementById('kpi-ethics').textContent = d.avg_ethics_score.toFixed(3);
+  document.getElementById('kpi-emerg').textContent = d.emergencies_today;
+}
+
+async function loadTimeline() {
+  const d = await api('/calls/timeline');
+  destroyChart('timeline');
+  const ctx = document.getElementById('chart-timeline').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+  gradient.addColorStop(0, 'rgba(99,102,241,0.3)');
+  gradient.addColorStop(1, 'rgba(99,102,241,0)');
+  charts['timeline'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Llamadas',
+        data: d.data,
+        borderColor: '#6366f1',
+        backgroundColor: gradient,
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#6366f1',
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#111b2e',
+        borderColor: '#1e2d4a',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y} llamadas`,
+        },
+      }},
+      scales: {
+        x: { grid: { color: '#1e2d4a' }, ticks: { maxTicksLimit: 12 } },
+        y: { grid: { color: '#1e2d4a' }, beginAtZero: true, ticks: { stepSize: 5 } },
+      },
+    },
+  });
+}
+
+async function loadRoutingChart() {
+  const d = await api('/routing/distribution');
+  destroyChart('routing');
+  charts['routing'] = new Chart(
+    document.getElementById('chart-routing').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: d.names,
+        datasets: [{ data: d.counts, backgroundColor: d.colors, borderWidth: 2, borderColor: '#111b2e', hoverBorderWidth: 3 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8 } },
+          tooltip: {
+            backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/d.total*100)}%)`,
+            },
+          },
+        },
+      },
+    }
+  );
+}
+
+async function loadLanguageChart() {
+  const d = await api('/routing/language');
+  destroyChart('language');
+  charts['language'] = new Chart(
+    document.getElementById('chart-language').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: d.labels,
+        datasets: [{ data: d.data, backgroundColor: d.colors, borderWidth: 2, borderColor: '#111b2e' }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8 } },
+          tooltip: {
+            backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+            callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` },
+          },
+        },
+      },
+    }
+  );
+}
+
+async function loadTrendChart() {
+  const d = await api('/calls/trend');
+  destroyChart('trend');
+  charts['trend'] = new Chart(
+    document.getElementById('chart-trend').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: d.labels,
+        datasets: [{ label: 'Llamadas', data: d.data, backgroundColor: 'rgba(99,102,241,0.6)', borderRadius: 5, borderSkipped: false }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+        }},
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+          y: { grid: { color: '#1e2d4a' }, beginAtZero: true },
+        },
+      },
+    }
+  );
+}
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+async function loadAgents() {
+  const d = await api('/agents');
+  const grid = document.getElementById('agent-grid');
+  grid.innerHTML = '';
+
+  const roleIcons = {
+    'Dental Receptionist': '📋',
+    'English Qualifier': '🗣',
+    'Emergency Triage Specialist': '🚨',
+    'Post-Visit Follow-up Coordinator': '📬',
+    'Billing Specialist': '💰',
+    'Outbound Coordinator': '📤',
+    'Meta-Agent Supervisor': '🧠',
+  };
+
+  d.agents.forEach(agent => {
+    const icon = roleIcons[agent.role] || '🤖';
+    const langStyle = agent.language === 'ES-MX'
+      ? 'color:#3b82f6;border-color:#1d4ed8;'
+      : agent.language === 'EN-US'
+        ? 'color:#8b5cf6;border-color:#5b21b6;'
+        : agent.language === 'Internal'
+          ? 'color:#64748b;border-color:#334155;'
+          : 'color:#10b981;border-color:#065f46;';
+
+    const caps = (agent.capabilities || []).slice(0, 4)
+      .map(c => `<span class="cap-chip">${c.replace(/_/g, ' ')}</span>`).join('');
+    const handoffs = (agent.handoffs || []).length > 0
+      ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);">Handoffs: ${agent.handoffs.join(', ')}</div>`
+      : '';
+
+    const voiceTag = agent.voice
+      ? `<span class="tag">🔊 ${agent.voice}</span>`
+      : `<span class="tag" style="color:var(--muted)">Sin voz</span>`;
+
+    grid.innerHTML += `
+      <div class="agent-card" style="border-top:3px solid ${agent.color};">
+        <div class="agent-header">
+          <div class="agent-avatar" style="background:${agent.color};">${agent.name.charAt(0)}</div>
+          <div class="agent-meta">
+            <div class="agent-name">${icon} ${agent.name}</div>
+            <div class="agent-role">${agent.role}</div>
+          </div>
+          <span class="lang-badge" style="${langStyle}">${agent.language}</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">
+            <div class="agent-stat-val" style="color:${agent.color};">${agent.calls_week.toLocaleString()}</div>
+            <div class="agent-stat-lbl">Llamadas/sem</div>
+          </div>
+          <div class="agent-stat">
+            <div class="agent-stat-val">${voiceTag}</div>
+            <div class="agent-stat-lbl" style="margin-top:2px;">Voz</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">${agent.description.substring(0,120)}…</div>
+        <div class="capabilities">${caps}</div>
+        ${handoffs}
+      </div>`;
+  });
+}
+
+// ── Calls ─────────────────────────────────────────────────────────────────────
+async function loadCalls() {
+  const d = await api('/calls/recent?n=15');
+  const tbody = document.getElementById('calls-tbody');
+  tbody.innerHTML = '';
+
+  d.calls.forEach(call => {
+    const scoreColor = score_color(call.score);
+    const fillPct = Math.round(call.score * 100);
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-family:monospace;font-size:12px;">${call.timestamp_display}</td>
+        <td>
+          <span class="agent-pill" style="background:${call.agent_color}33;">
+            <span style="width:7px;height:7px;border-radius:50%;background:${call.agent_color};display:inline-block;"></span>
+            ${call.agent_name}
+          </span>
+        </td>
+        <td>${lang_badge(call.language)}</td>
+        <td class="${call.priority === 'HIGH' ? 'priority-high' : 'priority-normal'}">${call.priority === 'HIGH' ? '🚨 ALTA' : 'NORMAL'}</td>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);" title="${call.message_preview}">${call.message_preview}</td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:${fillPct}%;background:${scoreColor};"></div></div>
+            <span class="score-text" style="color:${scoreColor};">${call.score.toFixed(2)}</span>
+          </div>
+        </td>
+        <td><span class="clearance-badge ${clearance_class(call.clearance)}">${clearance_emoji(call.clearance)} ${call.clearance}</span></td>
+        <td class="duration">${fmt_duration(call.duration_s)}</td>
+      </tr>`;
+  });
+}
+
+// ── Ethics ────────────────────────────────────────────────────────────────────
+async function loadEthics() {
+  const d = await api('/ethics/summary');
+  await Promise.all([
+    renderRadarChart(d),
+    renderClearanceChart(d),
+    renderVetoChart(d),
+    renderVetoGrid(d),
+  ]);
+}
+
+async function renderRadarChart(d) {
+  const dimLabels = { chesed: 'Chesed', gevurah: 'Gevurah', tiferet: 'Tiferet', netzach: 'Netzach', hod: 'Hod' };
+  const dimColors = { chesed: '#ec4899', gevurah: '#f97316', tiferet: '#eab308', netzach: '#22c55e', hod: '#06b6d4' };
+  const keys = Object.keys(d.avg_scores);
+  const labels = keys.map(k => dimLabels[k] || k);
+  const values = keys.map(k => d.avg_scores[k]);
+
+  destroyChart('radar');
+  charts['radar'] = new Chart(
+    document.getElementById('chart-radar').getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Score Promedio',
+          data: values,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.15)',
+          pointBackgroundColor: keys.map(k => dimColors[k] || '#6366f1'),
+          pointBorderColor: '#111b2e',
+          pointHoverRadius: 6,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+          callbacks: { label: ctx => ` Score: ${ctx.raw.toFixed(3)}` },
+        }},
+        scales: {
+          r: {
+            min: 0, max: 1, ticks: { stepSize: 0.25, backdropColor: 'transparent', font: { size: 10 } },
+            grid: { color: '#1e2d4a' },
+            pointLabels: { font: { size: 12, weight: '600' }, color: '#94a3b8' },
+          },
+        },
+      },
+    }
+  );
+}
+
+async function renderClearanceChart(d) {
+  const dist = d.clearance_distribution;
+  const total = Object.values(dist).reduce((a, b) => a + b, 0);
+  const labels  = ['APPROVED', 'CONDITIONAL', 'REJECTED'];
+  const values  = labels.map(l => dist[l] || 0);
+  const colors  = ['#10b981', '#f59e0b', '#ef4444'];
+
+  destroyChart('clearance');
+  charts['clearance'] = new Chart(
+    document.getElementById('chart-clearance').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#111b2e', hoverBorderWidth: 3 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '70%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+            callbacks: { label: ctx => ` ${ctx.parsed} (${(ctx.parsed/total*100).toFixed(1)}%)` },
+          },
+        },
+      },
+    }
+  );
+
+  const legend = document.getElementById('clearance-legend');
+  legend.innerHTML = labels.map((l, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${colors[i]};"></div>
+        <span style="font-size:12px;">${clearance_emoji(l)} ${l}</span>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:${colors[i]};">${values[i]} <span style="font-weight:400;color:var(--muted);">(${(values[i]/total*100).toFixed(1)}%)</span></span>
+    </div>`).join('');
+}
+
+async function renderVetoChart(d) {
+  const vetoes = d.veto_detail || [];
+  const labels = vetoes.map(v => v.id.replace(/_/g, ' '));
+  const values = vetoes.map(v => v.count);
+  const sevColors = { CRITICAL: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#06b6d4' };
+  const bgColors = vetoes.map(v => (sevColors[v.severity] || '#64748b') + 'aa');
+  const bdColors = vetoes.map(v => sevColors[v.severity] || '#64748b');
+
+  destroyChart('vetoes');
+  charts['vetoes'] = new Chart(
+    document.getElementById('chart-vetoes').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Detecciones',
+          data: values,
+          backgroundColor: bgColors,
+          borderColor: bdColors,
+          borderWidth: 1,
+          borderRadius: 5,
+          borderSkipped: false,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#111b2e', borderColor: '#1e2d4a', borderWidth: 1,
+        }},
+        scales: {
+          x: { grid: { display: false }, ticks: { maxRotation: 35 } },
+          y: { grid: { color: '#1e2d4a' }, beginAtZero: true, ticks: { stepSize: 1 } },
+        },
+      },
+    }
+  );
+}
+
+function renderVetoGrid(d) {
+  const vetoes = d.veto_detail || [];
+  const sevClass = { CRITICAL: 'sev-critical', HIGH: 'sev-high', MEDIUM: 'sev-medium' };
+  const sevColors = { CRITICAL: 'var(--danger)', HIGH: 'var(--warning)', MEDIUM: 'var(--info)' };
+  document.getElementById('veto-grid').innerHTML = vetoes.map(v => `
+    <div class="veto-card">
+      <div class="veto-count" style="color:${sevColors[v.severity] || 'var(--text)'};">${v.count}</div>
+      <div class="veto-name">${v.id.replace(/_/g, ' ')}</div>
+      <span class="veto-sev ${sevClass[v.severity] || ''}">${v.severity}</span>
+      <div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px;">${v.description}</div>
+    </div>`).join('');
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+async function loadHealth() {
+  const d = await api('/health');
+  const grid = document.getElementById('health-grid');
+  grid.innerHTML = '';
+
+  const services = [
+    { name: 'VocalisAI Platform', status: d.platform, metric: d.response_time_ms ? `${d.response_time_ms}ms` : null },
+    { name: 'Firebase Firestore', status: d.firebase === true ? 'ok' : d.firebase === false ? 'error' : 'unconfigured' },
+    { name: 'MCP Server', status: d.mcp_server || 'running', metric: `v${d.mcp_version}` },
+    { name: 'Ethics Engine', status: d.ethical_engine || 'ready' },
+    { name: 'Routing Engine', status: d.routing_engine || 'ready' },
+    { name: `Agentes`, status: d.agents_loaded === 7 ? 'ready' : 'partial', metric: `${d.agents_loaded} / 7` },
+  ];
+
+  if (d.cold_start) {
+    services[0].metric = `${d.response_time_ms}ms ❄️ cold start`;
+  }
+
+  const statusConfig = {
+    ok:           { dot: 'dot-green', text: 'Operativo', color: 'var(--success)' },
+    running:      { dot: 'dot-green', text: 'Corriendo', color: 'var(--success)' },
+    ready:        { dot: 'dot-green', text: 'Listo',     color: 'var(--success)' },
+    partial:      { dot: 'dot-yellow', text: 'Parcial',  color: 'var(--warning)' },
+    error:        { dot: 'dot-red', text: 'Error',       color: 'var(--danger)' },
+    unreachable:  { dot: 'dot-red', text: 'Inaccesible', color: 'var(--danger)' },
+    unconfigured: { dot: 'dot-gray', text: 'No configurado', color: 'var(--muted)' },
+    unknown:      { dot: 'dot-gray', text: 'Desconocido', color: 'var(--muted)' },
+  };
+
+  services.forEach(svc => {
+    const cfg = statusConfig[svc.status] || { dot: 'dot-gray', text: svc.status, color: 'var(--muted)' };
+    grid.innerHTML += `
+      <div class="health-card">
+        <div class="health-service">${svc.name}</div>
+        <div class="health-status-row">
+          <div class="dot ${cfg.dot}"></div>
+          <div class="health-status-text" style="color:${cfg.color};">${cfg.text}</div>
+        </div>
+        ${svc.metric ? `<div class="health-metric">${svc.metric}</div>` : ''}
+      </div>`;
+  });
+
+  // Sidebar status
+  const allOk = ['ok','running','ready'].includes(d.platform) || d.platform === 'unconfigured';
+  document.getElementById('sidebar-dot').className = `dot ${allOk ? 'dot-green' : 'dot-red'}`;
+  document.getElementById('sidebar-status').textContent = allOk ? 'Conectado' : 'Degradado';
+
+  // Config info
+  const configEl = document.getElementById('config-info');
+  const configItems = [
+    { key: 'Backend URL', val: d.backend_url },
+    { key: 'MCP Version', val: `v${d.mcp_version}` },
+    { key: 'Transport', val: 'HTTP + stdio' },
+    { key: 'Deployment', val: 'Google Cloud Run gen2' },
+    { key: 'Ethical Framework', val: 'Tikun Olam (5 dim.)' },
+    { key: 'LLM Providers', val: 'Gemini · GPT-4o · DeepSeek · Mistral · Grok-3' },
+  ];
+  configEl.innerHTML = configItems.map(item => `
+    <div style="background:var(--surface);border-radius:6px;padding:10px 12px;">
+      <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">${item.key}</div>
+      <div style="font-size:13px;font-weight:500;">${item.val}</div>
+    </div>`).join('');
+}
+
+// ── Simulator ─────────────────────────────────────────────────────────────────
+async function simulateRoute() {
+  const msg = document.getElementById('sim-user-msg').value.trim();
+  if (!msg) { alert('Escribe un mensaje del paciente.'); return; }
+
+  document.getElementById('sim-loading').style.display = 'flex';
+  try {
+    const lang = document.getElementById('sim-language').value || null;
+    const d = await api('/simulate/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, language: lang }),
+    });
+    renderRouteResult(d);
+    document.getElementById('route-placeholder').style.display = 'none';
+    document.getElementById('route-result').style.display = 'block';
+  } catch(e) {
+    document.getElementById('route-result').innerHTML = `<div style="color:var(--danger);font-size:13px;">Error: ${e.message}</div>`;
+  } finally {
+    document.getElementById('sim-loading').style.display = 'none';
+  }
+}
+
+async function simulateAll() {
+  const msg = document.getElementById('sim-user-msg').value.trim();
+  const resp = document.getElementById('sim-agent-resp').value.trim();
+  const agentId = document.getElementById('sim-agent').value;
+
+  if (!msg) { alert('Escribe un mensaje del paciente.'); return; }
+
+  document.getElementById('sim-loading').style.display = 'flex';
+  try {
+    const lang = document.getElementById('sim-language').value || null;
+
+    const [routeData, ethicsData] = await Promise.all([
+      api('/simulate/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, language: lang }),
+      }),
+      resp ? api('/simulate/ethics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: agentId, user_message: msg, agent_response: resp }),
+      }) : null,
+    ]);
+
+    renderRouteResult(routeData);
+    document.getElementById('route-placeholder').style.display = 'none';
+    document.getElementById('route-result').style.display = 'block';
+
+    if (ethicsData) {
+      renderEthicsResult(ethicsData);
+      document.getElementById('ethics-placeholder').style.display = 'none';
+      document.getElementById('ethics-result').style.display = 'block';
+    } else {
+      document.getElementById('ethics-placeholder').textContent = 'Escribe una respuesta del agente para la evaluación ética.';
+    }
+  } catch(e) {
+    console.error(e);
+    alert(`Error en simulación: ${e.message}`);
+  } finally {
+    document.getElementById('sim-loading').style.display = 'none';
+  }
+}
+
+function renderRouteResult(d) {
+  const r = d.routing;
+  const a = d.agent;
+  const priorityBadge = r.priority === 'HIGH'
+    ? `<span style="background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;">🚨 ALTA PRIORIDAD</span>`
+    : `<span style="background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:11px;">NORMAL</span>`;
+
+  document.getElementById('route-result').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:${r.agent_color};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;">${r.agent_name.charAt(0)}</div>
+      <div>
+        <div style="font-size:16px;font-weight:700;">→ ${r.agent_name}</div>
+        <div style="font-size:12px;color:var(--muted);">${a.role} · ${a.language}</div>
+      </div>
+      ${priorityBadge}
+    </div>
+    <div class="result-row"><span class="result-key">Razón</span><span class="result-val" style="color:var(--primary);font-family:monospace;font-size:12px;">${r.reason}</span></div>
+    <div class="result-row"><span class="result-key">Idioma detectado</span><span class="result-val">${r.detected_language === 'es' ? '🇪🇸 Español' : r.detected_language === 'en' ? '🇺🇸 English' : '❓ Desconocido'}</span></div>
+    <div class="result-row"><span class="result-key">Confianza</span><span class="result-val" style="color:var(--success);">${Math.round(r.confidence * 100)}%</span></div>
+    <div class="result-row"><span class="result-key">Override de emergencia</span><span class="result-val">${r.override ? '✅ Sí' : '—'}</span></div>
+    ${a.voice ? `<div class="result-row"><span class="result-key">Voz</span><span class="result-val">🔊 ${a.voice}</span></div>` : ''}
+    <div class="explanation-box">${d.explanation}</div>`;
+}
+
+function renderEthicsResult(d) {
+  const scoreColor = score_color(d.overall_score);
+  const clearanceEmoji = clearance_emoji(d.clearance);
+  const dimColors = { chesed: '#ec4899', gevurah: '#f97316', tiferet: '#eab308', netzach: '#22c55e', hod: '#06b6d4' };
+
+  const dimRows = Object.entries(d.dimensions).map(([name, dim]) => {
+    const barColor = dimColors[name] || '#6366f1';
+    const fillPct = Math.round(dim.score * 100);
+    return `<div class="dim-row">
+      <div class="dim-name">${name.charAt(0).toUpperCase() + name.slice(1)}</div>
+      <div class="dim-bar-bg"><div class="dim-bar-fill" style="width:${fillPct}%;background:${barColor};"></div></div>
+      <div class="dim-score" style="color:${barColor};">${dim.score.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ethics-result').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:22px;font-weight:700;color:${scoreColor};">${d.overall_score.toFixed(3)}</div>
+        <div style="font-size:12px;color:var(--muted);">Score global</div>
+      </div>
+      <span class="clearance-badge ${clearance_class(d.clearance)}" style="font-size:13px;padding:5px 12px;">${clearanceEmoji} ${d.clearance}</span>
+    </div>
+    ${d.hard_veto_triggered ? `<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--danger);">🚫 Hard Veto activado: ${d.violations.join(', ')}</div>` : ''}
+    <div style="margin-bottom:12px;">${dimRows}</div>
+    <div style="background:var(--bg);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.6;">${d.recommendation}</div>`;
+}
+
+// ── Section Loader ────────────────────────────────────────────────────────────
+const loaded = new Set();
+async function loadSection(name) {
+  if (loaded.has(name)) return;
+  loaded.add(name);
+  try {
+    if (name === 'overview')  await loadOverview();
+    if (name === 'agents')    await loadAgents();
+    if (name === 'calls')     await loadCalls();
+    if (name === 'ethics')    await loadEthics();
+    if (name === 'health')    await loadHealth();
+  } catch(e) {
+    console.error(`Error loading section ${name}:`, e);
+  }
+}
+
+async function refreshAll() {
+  loaded.clear();
+  await loadSection(currentSection);
+}
+
+// ── Auto-refresh every 60s ────────────────────────────────────────────────────
+setInterval(() => {
+  loaded.delete(currentSection);
+  loadSection(currentSection);
+}, 60_000);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadSection('overview');
+  // Pre-load health in background
+  setTimeout(() => loadSection('health'), 2000);
+})();
+</script>
+</body>
+</html>

@@ -26,10 +26,13 @@ dependencies = [
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
 [project.scripts]
-vocalisai-mcp = "vocalisai_mcp.server:main"
+vocalisai-mcp       = "vocalisai_mcp.server:main"
+vocalisai-dashboard = "vocalisai_mcp.dashboard.server:main"
 
 [project.urls]
 Homepage = "https://github.com/zoharmx/vocalisai-mcp"

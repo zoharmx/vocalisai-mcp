@@ -1,12 +1,19 @@
 version: "3.9"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VocalisAI MCP Server — Local Development Stack
-# Usage: docker compose up
+# VocalisAI — Local Development Stack
+#
+# Usage:
+#   docker compose up                  # starts both services
+#   docker compose up mcp              # only MCP server
+#   docker compose up dashboard        # only Dashboard
+#   docker compose logs -f dashboard   # tail dashboard logs
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  vocalisai-mcp:
+
+  # ── MCP Server (HTTP transport) ───────────────────────────────────────────
+  mcp:
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,12 +24,42 @@ services:
     env_file:
       - .env
     environment:
-      - MCP_TRANSPORT=http
-      - MCP_PORT=8001
+      SERVICE: mcp
+      MCP_TRANSPORT: http
+      PORT: "8001"
     volumes:
-      - ./src:/app/src:ro   # live reload in dev
+      - ./src:/app/src:ro        # live-reload in dev
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx,asyncio; asyncio.run(httpx.AsyncClient().get('http://localhost:8001/health'))"]
+      test: ["CMD", "python", "-c",
+             "import httpx, asyncio; asyncio.run(httpx.AsyncClient().get('http://localhost:8001/health'))"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+
+  # ── Dashboard (FastAPI / uvicorn) ─────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vocalisai-dashboard
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      SERVICE: dashboard
+      PORT: "8080"
+    volumes:
+      - ./src:/app/src:ro        # live-reload in dev
+    depends_on:
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import httpx, asyncio; asyncio.run(httpx.AsyncClient().get('http://localhost:8080/api/health'))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
