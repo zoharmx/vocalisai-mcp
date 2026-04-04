@@ -10,11 +10,12 @@ on:
       - "requirements.txt"
   workflow_dispatch:        # allow manual trigger from GitHub UI
 
-env:
-  GCP_PROJECT:  tikunframework
-  GCP_REGION:   us-central1
-  IMAGE:        us-central1-docker.pkg.dev/tikunframework/vocalisai/vocalisai-dashboard
-  SERVICE_NAME: vocalisai-dashboard
+# ── All project-specific values come from GitHub repository secrets/variables.
+# Configure them in: Settings → Secrets and variables → Actions
+#
+# Required Secrets:   GCP_SA_KEY, VOCALISAI_BASE_URL
+# Required Variables: GCP_PROJECT, GCP_REGION, GCP_AR_REPO (Artifact Registry repo name)
+# Optional Secrets:   VOCALISAI_API_KEY (if backend uses API key auth)
 
 jobs:
   deploy:
@@ -23,47 +24,68 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write         # for Workload Identity Federation (recommended)
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
 
+      # ── Authenticate ────────────────────────────────────────────────────────
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-          # Alternatively, use Workload Identity Federation:
-          # workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          # service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      # ── Build image tag from project variables (no hardcoded values) ────────
+      - name: Compute image tag
+        id: vars
+        run: |
+          PROJECT="${{ vars.GCP_PROJECT }}"
+          REGION="${{ vars.GCP_REGION }}"
+          REPO="${{ vars.GCP_AR_REPO }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/vocalisai-dashboard"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "image_sha=${IMAGE}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "image_latest=${IMAGE}:latest" >> "$GITHUB_OUTPUT"
 
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # ── Build & push ────────────────────────────────────────────────────────
       - name: Build Docker image
         run: |
           docker build \
-            --tag "$IMAGE:${{ github.sha }}" \
-            --tag "$IMAGE:latest" \
+            --tag "${{ steps.vars.outputs.image_sha }}" \
+            --tag "${{ steps.vars.outputs.image_latest }}" \
             --label "git-commit=${{ github.sha }}" \
+            --label "service=dashboard" \
             .
 
       - name: Push to Artifact Registry
         run: |
-          docker push "$IMAGE:${{ github.sha }}"
-          docker push "$IMAGE:latest"
+          docker push "${{ steps.vars.outputs.image_sha }}"
+          docker push "${{ steps.vars.outputs.image_latest }}"
 
+      # ── Deploy ──────────────────────────────────────────────────────────────
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy "$SERVICE_NAME" \
-            --image "$IMAGE:${{ github.sha }}" \
+          ENV_VARS="SERVICE=dashboard,VOCALISAI_BASE_URL=${{ secrets.VOCALISAI_BASE_URL }}"
+
+          # Only set VOCALISAI_API_KEY if the secret exists
+          SECRET_FLAGS=""
+          if [[ -n "${{ secrets.VOCALISAI_API_KEY }}" ]]; then
+            SECRET_FLAGS="--set-secrets VOCALISAI_API_KEY=vocalisai-api-key:latest"
+          fi
+
+          gcloud run deploy vocalisai-dashboard \
+            --image "${{ steps.vars.outputs.image_sha }}" \
             --platform managed \
-            --region "$GCP_REGION" \
+            --region "${{ vars.GCP_REGION }}" \
             --allow-unauthenticated \
-            --set-env-vars "SERVICE=dashboard,VOCALISAI_BASE_URL=${{ secrets.VOCALISAI_BASE_URL }}" \
-            --set-secrets "VOCALISAI_API_KEY=vocalisai-api-key:latest" \
+            --set-env-vars "$ENV_VARS" \
+            $SECRET_FLAGS \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \
@@ -72,10 +94,9 @@ jobs:
             --timeout 60 \
             --quiet
 
-      - name: Get service URL
+      - name: Print deployed URL
         run: |
-          URL=$(gcloud run services describe "$SERVICE_NAME" \
-            --region "$GCP_REGION" \
+          URL=$(gcloud run services describe vocalisai-dashboard \
+            --region "${{ vars.GCP_REGION }}" \
             --format "value(status.url)")
-          echo "✅ Dashboard deployed: $URL"
-          echo "DASHBOARD_URL=$URL" >> $GITHUB_ENV
+          echo "✅ Dashboard deployed at: $URL"
