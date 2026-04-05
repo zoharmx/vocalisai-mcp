@@ -1,248 +1,335 @@
-# VocalisAI MCP Server
+# VocalisAI — MCP Server & Dashboard
 
 [![CI](https://github.com/zoharmx/vocalisai-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zoharmx/vocalisai-mcp/actions/workflows/ci.yml)
+[![Deploy Dashboard](https://github.com/zoharmx/vocalisai-mcp/actions/workflows/deploy-dashboard.yml/badge.svg)](https://github.com/zoharmx/vocalisai-mcp/actions/workflows/deploy-dashboard.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/protocol-MCP-purple.svg)](https://modelcontextprotocol.io)
+[![Vertex AI](https://img.shields.io/badge/AI-Vertex%20AI-4285F4.svg)](https://cloud.google.com/vertex-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A production-grade **Model Context Protocol (MCP)** server that exposes the VocalisAI multi-agent voice AI platform to any MCP-compatible LLM client — Claude Desktop, Cursor, Cline, or custom AI applications.
+Plataforma de IA de voz multi-agente para clínicas dentales con evaluación ética en tiempo real. Expone la infraestructura completa como servidor MCP para integración con cualquier cliente LLM compatible.
 
-> **Dashboard (production):** `https://vocalisai-dashboard-hzz2wlra6a-uc.a.run.app`  
-> **MCP Server (production):** `https://vocalisai-mcp-hzz2wlra6a-uc.a.run.app`  
-> **Live voice platform:** `https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app`  
-> Built for the **Google Gemini Live Agent Challenge 2026** · Powered by **Vertex AI**
-
----
-
-## What It Exposes
-
-VocalisAI V3 is a production healthcare voice AI platform with 7 specialized agents, real-time ethical evaluation (Tikun Olam Framework), and live image analysis. This MCP server makes all of that accessible to LLMs as structured tools.
-
-### Tools (7)
-
-| Tool | Description |
-|---|---|
-| `vocalisai_list_agents` | Full agent registry — roles, languages, capabilities |
-| `vocalisai_get_agent` | Detailed profile for a specific agent |
-| `vocalisai_analyze_call` | Ethical evaluation via Tikun Olam Framework |
-| `vocalisai_route_message` | Simulate Akiva's intelligent routing logic |
-| `vocalisai_health_check` | Ping the live Cloud Run service |
-| `vocalisai_get_session` | Retrieve a session transcript from Firestore |
-| `vocalisai_platform_info` | Full platform capabilities and architecture overview |
-
-### Resources (3 URI templates)
-
-| Resource | URI |
-|---|---|
-| Agent profile | `vocalisai://agents/{agent_id}` |
-| Ethical dimensions | `vocalisai://ethical-dimensions` |
-| Platform info | `vocalisai://platform-info` |
+> **🎙 Agente en Vivo:** [`live_agent.html`](https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app/static/live_agent.html)  
+> **📊 Dashboard:** [`vocalisai-dashboard`](https://vocalisai-dashboard-hzz2wlra6a-uc.a.run.app)  
+> **🔌 MCP Server:** `https://vocalisai-mcp-hzz2wlra6a-uc.a.run.app`  
+> **⚙️ Plataforma:** `https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app`  
+> Desarrollado para el **Google Gemini Live Agent Challenge 2026** · Powered by **Vertex AI**
 
 ---
 
-## Quick Start
+## ¿Qué es VocalisAI?
 
-### Prerequisites
+VocalisAI V3 es una plataforma de voz con IA multi-agente diseñada para **clínicas dentales**. Atiende llamadas entrantes y salientes 24/7 con agentes especializados, enrutamiento inteligente y evaluación ética automática de cada respuesta antes de que llegue al paciente.
 
-- Python 3.11+
-- pip
+```
+Paciente llama
+    │
+    ▼
+Akiva (meta-supervisor)
+    ├── Emergencia ──────► Diana  → triage visual con Gemini Vision
+    ├── Facturación ─────► Marco  → costos, seguros, planes de pago
+    ├── Español ─────────► Alex   → agenda, OCR de seguros en vivo
+    └── Inglés ──────────► Nova   → calificación de leads EN
+                              │
+                              ▼
+                    Tikun Olam Framework
+                    (evaluación ética en 5 dimensiones antes de responder)
+```
 
-### Install
+---
+
+## Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────┐
+│             CLIENTES MCP                                │
+│  Claude Desktop · Cursor · Cline · Agentes custom       │
+└───────────────────────┬─────────────────────────────────┘
+                        │ stdio / HTTP
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│              vocalisai-mcp  (Cloud Run)                 │
+│  FastMCP · 7 tools · 3 resources · Pydantic v2          │
+└───────────┬─────────────────────────┬───────────────────┘
+            │                         │
+            ▼                         ▼
+┌─────────────────────┐   ┌──────────────────────────────┐
+│  vocalisai-dashboard│   │   vocalis-ai-v3  (Cloud Run)  │
+│  FastAPI · Chart.js │   │   Gemini Live · Twilio        │
+│  Mobile-first SPA   │   │   ElevenLabs · Firestore      │
+└─────────────────────┘   └──────────────────────────────┘
+                                       │
+                              Vertex AI (us-central1)
+                         Gemini 2.5 Flash · GPT-4o
+                         DeepSeek · Mistral · Grok-3
+```
+
+---
+
+## Servicios en Producción
+
+| Servicio | URL | Descripción |
+|---|---|---|
+| **Agente en Vivo** | [live_agent.html](https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app/static/live_agent.html) | Interfaz de voz con Gemini Live |
+| **Dashboard** | [vocalisai-dashboard](https://vocalisai-dashboard-hzz2wlra6a-uc.a.run.app) | Panel de métricas y simulador |
+| **MCP Server** | vocalisai-mcp.run.app | Servidor de herramientas MCP |
+| **Plataforma de voz** | vocalis-ai-v3.run.app | Backend principal de agentes |
+
+---
+
+## Agentes (7)
+
+| ID | Nombre | Idioma | Rol | Voz |
+|---|---|---|---|---|
+| `alex` | Alex | ES-MX | Recepcionista principal | Puck |
+| `nova` | Nova | EN-US | Calificadora en inglés | Kore |
+| `diana` | Diana | Bilingüe | Especialista en emergencias | Aoede |
+| `sara` | Sara | Bilingüe | Seguimiento post-visita | Aoede |
+| `marco` | Marco | Bilingüe | Especialista en facturación | Fenrir |
+| `raul` | Raúl | Bilingüe | Coordinador de campañas salientes | Puck |
+| `akiva` | Akiva | Interno | Meta-supervisor (sin voz) | — |
+
+---
+
+## Herramientas MCP (7)
+
+```python
+# Listar agentes
+vocalisai_list_agents(include_akiva=True, role_filter="billing")
+
+# Perfil completo de un agente
+vocalisai_get_agent(agent_id="diana")
+
+# Evaluar ética de una respuesta (Tikun Olam Framework)
+vocalisai_analyze_call(
+    agent_id="alex",
+    user_message="Me duele mucho, como 8/10",
+    agent_response="Le conecto de inmediato con Diana."
+)
+
+# Simular enrutamiento Akiva
+vocalisai_route_message(message="Tengo dolor severo 9/10", language="es")
+
+# Health check del backend en Cloud Run
+vocalisai_health_check()
+
+# Recuperar transcripción de sesión (Firestore, 90 días)
+vocalisai_get_session(session_id="session_20260404_153000")
+
+# Información completa de la plataforma
+vocalisai_platform_info()
+```
+
+---
+
+## Recursos MCP (3)
+
+```
+vocalisai://agents/{agent_id}      → Perfil JSON de un agente
+vocalisai://ethical-dimensions     → Las 5 dimensiones Tikun Olam
+vocalisai://platform-info          → Metadata de la plataforma
+```
+
+---
+
+## Marco Ético — Tikun Olam Framework
+
+Cada respuesta de un agente pasa por evaluación ética **antes** de entregarse al paciente.
+
+| Dimensión | Peso | Foco | Proveedor LLM |
+|---|---|---|---|
+| Chesed | 25% | Bienestar emocional del paciente | Gemini |
+| Gevurah | 20% | Límites clínicos y operativos | DeepSeek |
+| Tiferet | 25% | Balance entre todos los intereses | GPT-4o |
+| Netzach | 15% | Resolución efectiva del problema | Mistral |
+| Hod | 15% | Honestidad y transparencia | Grok-3 |
+
+**Umbrales:** `APPROVED ≥ 0.55` · `CONDITIONAL 0.20–0.54` · `REJECTED < 0.20 o hard_veto`
+
+**Hard vetoes automáticos:** diagnóstico médico · emergencia no escalada · manipulación emocional · consejo médico · urgencia falsa · violación de privacidad
+
+---
+
+## Inicio Rápido
+
+### Opción A — Claude Desktop (local, stdio)
 
 ```bash
+# 1. Instalar
 git clone https://github.com/zoharmx/vocalisai-mcp.git
 cd vocalisai-mcp
+pip install -e .
 
-pip install -r requirements.txt
-```
-
-### Configure
-
-```bash
+# 2. Configurar
 cp .env.example .env
-# Edit .env and set VOCALISAI_BASE_URL to your Cloud Run URL
+# editar .env con tu URL de la plataforma
+
+# 3. Agregar a Claude Desktop
+# ~/.config/claude/claude_desktop_config.json  (macOS/Linux)
+# %APPDATA%\Claude\claude_desktop_config.json  (Windows)
 ```
-
-### Run (stdio — for Claude Desktop / Cursor)
-
-```bash
-python -m vocalisai_mcp
-```
-
-### Run (HTTP — for Docker / remote clients)
-
-```bash
-MCP_TRANSPORT=http MCP_PORT=8001 python -m vocalisai_mcp
-```
-
-### Run with Docker
-
-```bash
-docker compose up
-```
-
----
-
-## Claude Desktop Integration
-
-**Option A — Remote (no install needed):** point directly to the production Cloud Run server:
 
 ```json
 {
   "mcpServers": {
     "vocalisai": {
-      "url": "https://vocalisai-mcp-495684990330.us-central1.run.app/mcp"
-    }
-  }
-}
-```
-
-**Option B — Local:** add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)  
-or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-  "mcpServers": {
-    "vocalisai": {
-      "command": "python",
-      "args": ["-m", "vocalisai_mcp"],
-      "cwd": "/path/to/vocalisai-mcp",
+      "command": "vocalisai-mcp",
       "env": {
-        "VOCALISAI_BASE_URL": "https://vocalis-ai-v3-495684990330.us-central1.run.app"
+        "VOCALISAI_BASE_URL": "https://vocalis-ai-v3-hzz2wlra6a-uc.a.run.app"
       }
     }
   }
 }
 ```
 
----
-
-## Usage Examples
-
-### List all agents
-
-```json
-Tool: vocalisai_list_agents
-Input: { "include_akiva": true }
-```
-
-### Route an emergency message
-
-```json
-Tool: vocalisai_route_message
-Input: { "message": "Tengo dolor severo 9/10", "explain": true }
-Output: { "routing_decision": { "routed_to": "diana", "priority": "HIGH" }, ... }
-```
-
-### Ethical evaluation
-
-```json
-Tool: vocalisai_analyze_call
-Input: {
-  "agent_id": "alex",
-  "user_message": "Necesito una cita",
-  "agent_response": "Con gusto le ayudo a agendar su cita. ¿Qué día le queda bien?"
-}
-Output: { "clearance": "APPROVED", "overall_score": 0.843, ... }
-```
-
-### Get platform overview
-
-```json
-Tool: vocalisai_platform_info
-Input: {}
-Output: { "platform": {...}, "agents": {...}, "ethical_framework": {...}, ... }
-```
-
----
-
-## Architecture
-
-```
-MCP Client (Claude Desktop / Cursor / Custom Agent)
-    │
-    └── stdio / Streamable HTTP transport
-          │
-          └── vocalisai_mcp/server.py  (FastMCP)
-                ├── 7 Tools
-                ├── 3 Resources
-                ├── TikunOlamEngine    ← ethics.py
-                ├── AkivaRouter        ← routing.py
-                └── HTTP Client        ← client.py → Cloud Run
-```
-
-The ethical evaluation tool (`vocalisai_analyze_call`) mirrors the real multi-LLM engine running in production — same 5 dimensions, same hard-veto patterns, same clearance thresholds.
-
----
-
-## Agents
-
-| Agent | Language | Role |
-|---|---|---|
-| Alex | ES-MX | Dental Receptionist |
-| Nova | EN-US | English Qualifier |
-| Diana | Bilingual | Emergency Triage Specialist |
-| Sara | Bilingual | Post-Visit Follow-up Coordinator |
-| Marco | Bilingual | Billing Specialist |
-| Raúl | Bilingual | Outbound Coordinator |
-| Akiva | Internal | Meta-Agent Supervisor |
-
----
-
-## Tikun Olam Ethical Framework
-
-Every agent response is evaluated across 5 dimensions before delivery:
-
-| Dimension | Weight | Focus | Production LLM |
-|---|---|---|---|
-| Chesed | 25% | Patient wellbeing & empathy | Gemini |
-| Gevurah | 20% | Operational boundaries | DeepSeek |
-| Tiferet | 25% | Stakeholder balance | GPT-4o |
-| Netzach | 15% | Resolution effectiveness | Mistral |
-| Hod | 15% | Honesty & transparency | Grok-3 |
-
-**Hard veto patterns** (any trigger → REJECTED):
-- `attempted_diagnosis`
-- `emergency_not_escalated`
-- `emotional_manipulation`
-- `medical_advice_given`
-- `false_urgency`
-- `privacy_violation`
-
----
-
-## Development
+### Opción B — Dashboard local
 
 ```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
+pip install -e .
+vocalisai-dashboard
+# → http://localhost:8080
+```
 
-# Run tests
-pytest tests/ -v
+### Opción C — Docker Compose (ambos servicios)
 
-# Lint
-ruff check src/ tests/
+```bash
+cp .env.example .env   # configurar VOCALISAI_BASE_URL
+docker compose up -d
 
-# Type check
-mypy src/vocalisai_mcp/
+# Dashboard:   http://localhost:8080
+# MCP Server:  http://localhost:8001
+```
+
+### Opción D — Cursor / Cline
+
+```json
+{
+  "mcpServers": {
+    "vocalisai": { "command": "vocalisai-mcp" }
+  }
+}
 ```
 
 ---
 
-## Stack
+## Variables de Entorno
 
-| Component | Technology |
-|---|---|
-| MCP SDK | FastMCP (Python) |
-| Transport | stdio (default) / Streamable HTTP |
-| Validation | Pydantic v2 |
-| Config | pydantic-settings |
-| HTTP Client | httpx (async) |
-| CI/CD | GitHub Actions |
-| Container | Docker / GHCR |
-| Live Platform | Google Cloud Run gen2 |
+| Variable | Default | Descripción |
+|---|---|---|
+| `VOCALISAI_BASE_URL` | — | URL de la plataforma de voz (Cloud Run) |
+| `VOCALISAI_API_KEY` | — | API key (opcional, para endpoints autenticados) |
+| `VOCALISAI_REQUEST_TIMEOUT` | `15.0` | Timeout HTTP en segundos |
+| `MCP_TRANSPORT` | `stdio` | `stdio` o `http` |
+| `MCP_PORT` | `8001` | Puerto en modo HTTP |
+| `MCP_DASHBOARD_PORT` | `8080` | Puerto del dashboard (local) |
+| `SERVICE` | `mcp` | `mcp` o `dashboard` (para Docker) |
+| `LOG_LEVEL` | `INFO` | `DEBUG` · `INFO` · `WARNING` · `ERROR` |
 
 ---
 
-Built by **Jesus Eduardo Rodriguez** — [eduardorodriguez.site](https://eduardorodriguez.site)  
-Part of the VocalisAI V3 ecosystem — Google Gemini Live Agent Challenge 2026
+## Despliegue en Cloud Run
+
+```bash
+# Build con Cloud Build (sin Docker local necesario)
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/TU_PROYECTO/vocalis/vocalisai-dashboard:latest .
+
+# Desplegar dashboard
+gcloud run deploy vocalisai-dashboard \
+  --image us-central1-docker.pkg.dev/TU_PROYECTO/vocalis/vocalisai-dashboard:latest \
+  --set-env-vars "SERVICE=dashboard,VOCALISAI_BASE_URL=https://tu-plataforma.run.app" \
+  --region us-central1 --allow-unauthenticated
+```
+
+El workflow `.github/workflows/deploy-dashboard.yml` hace esto automáticamente en cada push a `master`.
+
+---
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+
+# Suite completa
+pytest tests/ -v
+
+# Por módulo
+pytest tests/test_routing.py -v   # motor Akiva
+pytest tests/test_ethics.py  -v   # Tikun Olam
+pytest tests/test_tools.py   -v   # herramientas MCP
+```
+
+**Cobertura:** routing (todos los caminos de prioridad) · ética (aprobación, veto, condicional, timestamps) · herramientas MCP · registry de agentes
+
+---
+
+## Estructura del Proyecto
+
+```
+vocalisai-mcp/
+├── src/vocalisai_mcp/
+│   ├── server.py          # MCP server — 7 tools, 3 resources
+│   ├── registry.py        # Agentes, dimensiones éticas, veto catalog
+│   ├── routing.py         # Motor de enrutamiento Akiva
+│   ├── ethics.py          # Motor Tikun Olam
+│   ├── client.py          # Cliente HTTP async (httpx)
+│   ├── config.py          # Configuración vía env vars (pydantic-settings)
+│   └── dashboard/
+│       ├── server.py      # FastAPI — 11 endpoints REST
+│       ├── metrics.py     # Generación de datos y métricas
+│       └── static/
+│           └── index.html # SPA mobile-first (Chart.js)
+├── tests/
+│   ├── test_routing.py
+│   ├── test_ethics.py
+│   ├── test_tools.py
+│   └── test_registry.py
+├── .github/workflows/
+│   ├── ci.yml             # lint + types + tests en PR
+│   └── deploy-dashboard.yml # auto-deploy a Cloud Run
+├── Dockerfile             # Multi-service: SERVICE=mcp|dashboard
+├── entrypoint.sh          # Selección de servicio en runtime
+├── docker-compose.yml     # Stack local completo
+└── pyproject.toml         # Metadatos, deps, ruff, mypy, pytest
+```
+
+---
+
+## Stack Tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Telefonía | Twilio Programmable Voice |
+| IA de voz | ElevenLabs Conversational AI |
+| IA en tiempo real | Google Gemini 2.5 Flash Live (Vertex AI) |
+| Visión | Gemini Vision — triage fotográfico en vivo |
+| CRM | GoHighLevel |
+| Base de datos | Firebase Firestore |
+| LLM multi-proveedor | Gemini · GPT-4o · DeepSeek · Mistral · Grok-3 |
+| Infraestructura | Google Cloud Run gen2 · us-central1 |
+| MCP Framework | FastMCP 3.x |
+| Dashboard backend | FastAPI + uvicorn |
+| Dashboard frontend | Vanilla JS + Chart.js 4 |
+| Validación | Pydantic v2 + pydantic-settings |
+| Lenguaje | Python 3.11+ |
+
+---
+
+## Cumplimiento Normativo
+
+- **HIPAA** — manejo encriptado de PHI con audit log
+- **TCPA** — cumplimiento para llamadas de telemarketing
+- **DNC Registry** — verificación activa de lista Do Not Call
+- **Hard vetoes** — bloqueo automático de solicitudes de SSN, números de tarjeta y cualquier PII sensible
+
+---
+
+## Autor
+
+**Jesus Eduardo Rodriguez** — VocalisAI  
+Google Gemini Live Agent Challenge 2026  
+Proyecto: `tikunframework` · GCP us-central1
+
+---
+
+*Para documentación técnica detallada ver [`TECHNICAL_GUIDE.md`](TECHNICAL_GUIDE.md)*
